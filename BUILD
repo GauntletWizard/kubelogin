@@ -1,6 +1,3 @@
-# Rules for golang support
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
-
 # End golang support
 # Rules to build docker images
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
