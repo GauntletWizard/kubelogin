@@ -24,11 +24,11 @@ type app struct {
 
 // struct that contains necessary oauth/oidc information
 type redisValues struct {
-	password   string
-	address    string
-	timeToLive time.Duration
-	sentinel   bool
-	client     *redis.Client
+	password       string
+	address        string
+	timeToLive     time.Duration
+	sentinelMaster string
+	client         *redis.Client
 }
 
 type oidcClient struct {
@@ -298,10 +298,10 @@ func getMux(app app, downloadDir string) *http.ServeMux {
 
 func setRedisValues(redisAddress string, redisPassword string, redisTTL time.Duration, sentinel string) *redisValues {
 	return &redisValues{
-		address:    redisAddress,
-		password:   redisPassword,
-		timeToLive: redisTTL,
-		sentinel:   sentinel != "",
+		address:        redisAddress,
+		password:       redisPassword,
+		timeToLive:     redisTTL,
+		sentinelMaster: sentinel,
 	}
 }
 
@@ -313,13 +313,15 @@ func setAppMemberFields(rv *redisValues, oidcClient *oidcClient) app {
 }
 
 func (rv *redisValues) makeRedisClient() error {
-	if rv.sentinel {
+	if rv.sentinelMaster != "" {
+		log.Println("Using Redis in Sentinel mode...")
 		rv.client = redis.NewFailoverClient(&redis.FailoverOptions{
 			SentinelAddrs: strings.Split(rv.address, ","),
-			MasterName:    "mymaster",
+			MasterName:    rv.sentinelMaster,
 			Password:      rv.password,
 		})
 	} else {
+		log.Println("Using Redis in stanadard mode...")
 		rv.client = redis.NewClient(&redis.Options{
 			Addr:     rv.address,
 			Password: rv.password,
