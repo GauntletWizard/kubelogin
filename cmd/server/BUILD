@@ -30,6 +30,15 @@ go_image(
     visibility = ["//visibility:public"],
 )
 
+container_push(
+    name = "push_dockerimage",
+    image = "dockerimage",
+    registry = "index.docker.io",
+    repository = "gauntletwizard/kubelogin",
+    format = "Docker",
+    tag = "{BUILD_EMBED_LABEL}",
+)
+
 go_test(
     name = "go_default_test",
     srcs = ["main_test.go"],
