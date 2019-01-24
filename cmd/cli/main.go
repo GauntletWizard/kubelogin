@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -32,12 +33,14 @@ type app struct {
 }
 
 type jsonoutput struct {
-	Credential jsoncreds `json:"credential"`
+	Status     jsoncreds `json:"status"`
+	APIVersion string    `json:"apiVersion"`
+	Kind       string    `json:"kind"`
 }
 
 type jsoncreds struct {
-	Token  string `json:"access_token"`
-	Expiry string `json:"token_expiry"`
+	Token  string `json:"token"`
+	Expiry string `json:"expirationTimestamp"`
 }
 
 type kubeYAML struct {
@@ -129,7 +132,9 @@ func (app *app) makeExchange(token string) error {
 	}
 	if app.jsonout {
 		out := jsonoutput{
-			Credential: jsoncreds{
+			APIVersion: "client.authentication.k8s.io/v1beta1",
+			Kind:       "ExecCredential",
+			Status: jsoncreds{
 				Token: string(jwt),
 				// Assume the duration for now.
 				Expiry: time.Now().Add(12 * time.Hour).Format(time.RFC3339),
@@ -139,7 +144,7 @@ func (app *app) makeExchange(token string) error {
 		if err != nil {
 			log.Println(err)
 		}
-		fmt.Println(json)
+		fmt.Println(string(json))
 		return err
 	} else {
 		if err := app.configureKubectl(string(jwt)); err != nil {
@@ -390,6 +395,8 @@ func (app *app) configureFile(kubeloginrcAlias string, loginServerURL *url.URL, 
 }
 
 func main() {
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
 	var app app
 	loginCommmand := flag.NewFlagSet("login", flag.ExitOnError)
 	setFlags(loginCommmand, true)
@@ -425,6 +432,8 @@ func main() {
 			}
 		}
 	case "autologin":
+		// This mode is intended for use as a credential plugin
+		// See https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins for docs
 		if !strings.HasPrefix(os.Args[2], "--") {
 			//use alias to extract needed information
 			if err := app.getConfigSettings(os.Args[2]); err != nil {
