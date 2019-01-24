@@ -11,7 +11,22 @@ The intended usage of this CLI is to communicate with the kubelogin server to
 set the token field of the kubectl config file. The kubernetes API server will
 use this token for OIDC authentication.
 
-The CLI accepts two verbs: **`login`** and **`config`**
+The CLI accepts three verbs: **autologin**, **`login`** and **`config`**
+
+You probably want to use kubelogin as a [credential plugin](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins) with autologin. Add a user stanza like the following to your `~/.kube/config`
+
+```
+users:
+- name: kubelogin
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1beta1
+      command: /path/to/kubelogin/cli
+      args:
+      - autologin
+      - --server-url=https://kubelogin.yoursite.com
+      env: null
+```
 
 How to use these verbs:
 
