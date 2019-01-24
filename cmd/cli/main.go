@@ -29,6 +29,15 @@ type app struct {
 	kubeloginServer   string
 }
 
+type jsonoutput struct {
+	Credential jsoncreds `json:"credential"`
+}
+
+type jsoncreds struct {
+	Token  string        `json:"access_token"`
+	Expiry time.Duration `json:"token_expiry"`
+}
+
 type kubeYAML struct {
 	APIVersion string `yaml:"apiVersion"`
 	Clusters   []struct {
