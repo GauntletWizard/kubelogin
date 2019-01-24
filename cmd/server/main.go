@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/coreos/go-oidc"
@@ -26,6 +27,7 @@ type redisValues struct {
 	password   string
 	address    string
 	timeToLive time.Duration
+	sentinel   bool
 	client     *redis.Client
 }
 
@@ -294,11 +296,12 @@ func getMux(app app, downloadDir string) *http.ServeMux {
 	return newMux
 }
 
-func setRedisValues(redisAddress string, redisPassword string, redisTTL time.Duration) *redisValues {
+func setRedisValues(redisAddress string, redisPassword string, redisTTL time.Duration, sentinel string) *redisValues {
 	return &redisValues{
 		address:    redisAddress,
 		password:   redisPassword,
 		timeToLive: redisTTL,
+		sentinel:   sentinel != "",
 	}
 }
 
@@ -310,11 +313,18 @@ func setAppMemberFields(rv *redisValues, oidcClient *oidcClient) app {
 }
 
 func (rv *redisValues) makeRedisClient() error {
-	rv.client = redis.NewClient(&redis.Options{
-		Addr:     rv.address,
-		Password: rv.password,
-		DB:       0,
-	})
+	if rv.sentinel {
+		rv.client = redis.NewFailoverClient(&redis.FailoverOptions{
+			SentinelAddrs: strings.Split(rv.address, ","),
+			Password:      rv.password,
+		})
+	} else {
+		rv.client = redis.NewClient(&redis.Options{
+			Addr:     rv.address,
+			Password: rv.password,
+			DB:       0,
+		})
+	}
 	ping, err := rv.client.Ping().Result()
 	if err != nil {
 		log.Printf("Error pinging Redis database: %v", err)
@@ -392,7 +402,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to parse the duration of the Redis TTL, please check that a valid value was set. e.g. 10s or 1m10s")
 	}
-	rv := setRedisValues(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), redisTTL)
+	rv := setRedisValues(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), redisTTL, os.Getenv("REDIS_SENTINEL"))
 	oidcClient := newAuthClient(os.Getenv("CLIENT_ID"), os.Getenv("CLIENT_SECRET"), os.Getenv("REDIRECT_URL"), provider, groupsClaim, userClaim)
 	app := setAppMemberFields(rv, oidcClient)
 	if err := app.redisValues.makeRedisClient(); err != nil {

@@ -16,7 +16,7 @@ import (
 func TestServerSpecs(t *testing.T) {
 	Convey("Kubelogin Server", t, func() {
 		redisTTL, _ := time.ParseDuration("10s")
-		rv := setRedisValues(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), redisTTL)
+		rv := setRedisValues(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), redisTTL, os.Getenv("REDIS_SENTINEL"))
 		oidcClient := newAuthClient(os.Getenv("CLIENT_ID"), os.Getenv("CLIENT_SECRET"), os.Getenv("REDIRECT_URL"), &oidc.Provider{}, "groupsClaim", "userClaim")
 		app := setAppMemberFields(rv, oidcClient)
 		unitTestServer := httptest.NewServer(getMux(app, "/downoad"))
@@ -109,7 +109,7 @@ func TestGetField(t *testing.T) {
 func TestMakeRedisClient(t *testing.T) {
 	Convey("makeRedisClient", t, func() {
 		redisTTL, _ := time.ParseDuration("10s")
-		rv := setRedisValues(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), redisTTL)
+		rv := setRedisValues(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), redisTTL, os.Getenv("REDIS_SENTINEL"))
 		oidcClient := newAuthClient(os.Getenv("CLIENT_ID"), os.Getenv("CLIENT_SECRET"), os.Getenv("REDIRECT_URL"), &oidc.Provider{}, "groupsClaim", "userClaim")
 		app := setAppMemberFields(rv, oidcClient)
 		Convey("should fail since no Redis address environment variable was set", func() {
@@ -122,7 +122,7 @@ func TestMakeRedisClient(t *testing.T) {
 func TestGenerateToken(t *testing.T) {
 	Convey("generateToken", t, func() {
 		redisTTL, _ := time.ParseDuration("10s")
-		rv := setRedisValues(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), redisTTL)
+		rv := setRedisValues(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), redisTTL, os.Getenv("REDIS_SENTINEL"))
 		oidcClient := newAuthClient(os.Getenv("CLIENT_ID"), os.Getenv("CLIENT_SECRET"), os.Getenv("REDIRECT_URL"), &oidc.Provider{}, "groupsClaim", "userClaim")
 		app := setAppMemberFields(rv, oidcClient)
 		err := app.redisValues.makeRedisClient()
@@ -140,7 +140,7 @@ func TestGenerateToken(t *testing.T) {
 func TestFetchJWTForToken(t *testing.T) {
 	Convey("fetchJWTForToken", t, func() {
 		redisTTL, _ := time.ParseDuration("10s")
-		rv := setRedisValues(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), redisTTL)
+		rv := setRedisValues(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), redisTTL, os.Getenv("REDIS_SENTINEL"))
 		oidcClient := newAuthClient(os.Getenv("CLIENT_ID"), os.Getenv("CLIENT_SECRET"), os.Getenv("REDIRECT_URL"), &oidc.Provider{}, "groupsClaim", "userClaim")
 		app := setAppMemberFields(rv, oidcClient)
 		err := app.redisValues.makeRedisClient()
@@ -158,7 +158,7 @@ func TestFetchJWTForToken(t *testing.T) {
 func TestGenerateSendBackURL(t *testing.T) {
 	Convey("generateSendBackURL", t, func() {
 		redisTTL, _ := time.ParseDuration("10s")
-		rv := setRedisValues(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), redisTTL)
+		rv := setRedisValues(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), redisTTL, os.Getenv("REDIS_SENTINEL"))
 		oidcClient := newAuthClient(os.Getenv("CLIENT_ID"), os.Getenv("CLIENT_SECRET"), os.Getenv("REDIRECT_URL"), &oidc.Provider{}, "groupsClaim", "userClaim")
 		app := setAppMemberFields(rv, oidcClient)
 		err := app.redisValues.makeRedisClient()
@@ -194,7 +194,7 @@ func TestNewAuthClient(t *testing.T) {
 func TestHealthHandler(t *testing.T) {
 	Convey("healthHandler", t, func() {
 		redisTTL, _ := time.ParseDuration("10s")
-		rv := setRedisValues(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), redisTTL)
+		rv := setRedisValues(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), redisTTL, os.Getenv("REDIS_SENTINEL"))
 		oidcClient := newAuthClient(os.Getenv("CLIENT_ID"), os.Getenv("CLIENT_SECRET"), os.Getenv("REDIRECT_URL"), &oidc.Provider{}, "groupsClaim", "userClaim")
 		app := setAppMemberFields(rv, oidcClient)
 		unitTestServer := httptest.NewServer(getMux(app, "/download"))
