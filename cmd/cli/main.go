@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -27,6 +28,7 @@ type app struct {
 	kubectlConfigPath string
 	kubeloginAlias    string
 	kubeloginServer   string
+	jsonout           bool
 }
 
 type jsonoutput struct {
@@ -34,8 +36,8 @@ type jsonoutput struct {
 }
 
 type jsoncreds struct {
-	Token  string        `json:"access_token"`
-	Expiry time.Duration `json:"token_expiry"`
+	Token  string `json:"access_token"`
+	Expiry string `json:"token_expiry"`
 }
 
 type kubeYAML struct {
@@ -125,9 +127,25 @@ func (app *app) makeExchange(token string) error {
 		log.Printf("Unable to read response body. %s", err)
 		return err
 	}
-	if err := app.configureKubectl(string(jwt)); err != nil {
-		log.Printf("Error when setting credentials: %v", err)
+	if app.jsonout {
+		out := jsonoutput{
+			Credential: jsoncreds{
+				Token: string(jwt),
+				// Assume the duration for now.
+				Expiry: time.Now().Add(12 * time.Hour).Format(time.RFC3339),
+			},
+		}
+		json, err := json.Marshal(out)
+		if err != nil {
+			log.Println(err)
+		}
+		fmt.Println(json)
 		return err
+	} else {
+		if err := app.configureKubectl(string(jwt)); err != nil {
+			log.Printf("Error when setting credentials: %v", err)
+			return err
+		}
 	}
 	return nil
 }
@@ -231,26 +249,28 @@ func generateURLAndListenForServerResponse(app app) {
 	go func() {
 		l, err := net.Listen("tcp", ":"+portNum)
 		if err != nil {
-			fmt.Printf("Error listening on port: %s. Error: %v\n", portNum, err)
+			log.Printf("Error listening on port: %s. Error: %v\n", portNum, err)
 			os.Exit(1)
 		}
 		if runtime.GOOS == "darwin" {
 			// On OS X, run the `open` CLI to use the default browser to open the login URL.
-			fmt.Printf("Opening %s ...\n", loginURL)
+			log.Printf("Opening %s ...\n", loginURL)
 			err := exec.Command("/usr/bin/open", loginURL).Run()
 			if err != nil {
-				fmt.Printf("Error opening; please open the URL manually: %s \n", loginURL)
+				log.Printf("Error opening; please open the URL manually: %s \n", loginURL)
 			}
 		} else {
-			fmt.Printf("Follow this URL to log into auth provider: %s\n", loginURL)
+			log.Printf("Follow this URL to log into auth provider: %s\n", loginURL)
 		}
 		if err = http.Serve(l, createMux(app)); err != nil {
-			fmt.Printf("Error listening on port: %s. Error: %v\n", portNum, err)
+			log.Printf("Error listening on port: %s. Error: %v\n", portNum, err)
 			os.Exit(1)
 		}
 	}()
 	<-doneChannel
-	fmt.Println("You are now logged in! Enjoy kubectl-ing!")
+	if !app.jsonout {
+		fmt.Println("You are now logged in! Enjoy kubectl-ing!")
+	}
 	time.Sleep(1 * time.Second)
 }
 
@@ -401,6 +421,25 @@ func main() {
 				}
 				app.kubectlUser = userFlag
 				app.kubeloginServer = kubeloginServerBaseURL
+				generateURLAndListenForServerResponse(app)
+			}
+		}
+	case "autologin":
+		if !strings.HasPrefix(os.Args[2], "--") {
+			//use alias to extract needed information
+			if err := app.getConfigSettings(os.Args[2]); err != nil {
+				log.Fatal(err)
+			}
+			generateURLAndListenForServerResponse(app)
+		} else {
+			_ = loginCommmand.Parse(os.Args[2:])
+			if loginCommmand.Parsed() {
+				if kubeloginServerBaseURL == "" {
+					log.Fatal("--server-url must be set!")
+				}
+				app.kubectlUser = userFlag
+				app.kubeloginServer = kubeloginServerBaseURL
+				app.jsonout = true
 				generateURLAndListenForServerResponse(app)
 			}
 		}
