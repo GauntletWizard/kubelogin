@@ -53,6 +53,10 @@ spec:
           value: "{{ .Values.kubelogin.redirectURL}}"
         - name: REDIS_ADDR
           value: "{{required "A valid .Values.redis.address entry required!" .Values.redis.address}}"
+          {{- if  .Values.redis.sentinelMaster -}}
+        - name: REDIS_SENTINEL
+          value: "{{.Values.redis.sentinelMaster}}"
+          {{- end }}
         - name: REDIS_TTL
           value: "{{ .Values.redis.ttl}}"
         - name: TOKEN_TYPE

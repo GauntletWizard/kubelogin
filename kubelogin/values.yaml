@@ -42,6 +42,7 @@ kubelogin:
 redis:
   address: "example-redis-address:6379"
   ttl: "10s"
+  sentinelMaster: ""
   # The kubelogin chart assumes a secret will be present in the target namespace
   # that contains a password for accessing Redis. 
   # If Redis is installed via Helm into the same namespace as Kubelogin, this
